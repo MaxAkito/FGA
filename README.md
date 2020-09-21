@@ -3,6 +3,8 @@
 
 Auto-battle app for F/GO (Android 7 or later, no need for Root). Forked from <a href='https://github.com/MathewSachin/Fate-Grand-Automata'>https://github.com/MathewSachin/Fate-Grand-Automata</a>
 
+Main feature of this fork is "modded" or cloned APK support.
+
 ## Acknowledgements
 - [FGO-Lua][FGOLua] developers are the real deal. Without them this app won't exist.
 - We're using OpenCV Android package from: https://github.com/iamareebjamal/opencv-android
