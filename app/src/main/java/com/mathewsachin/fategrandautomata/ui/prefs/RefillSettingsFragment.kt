@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.activityViewModels
 import androidx.preference.EditTextPreference
+import androidx.preference.MultiSelectListPreference
 import androidx.preference.PreferenceFragmentCompat
 import com.mathewsachin.fategrandautomata.R
 import com.mathewsachin.fategrandautomata.util.makeNumeric
@@ -27,6 +28,12 @@ class RefillSettingsFragment : PreferenceFragmentCompat() {
         findPreference<EditTextPreference>(getString(R.string.pref_refill_repetitions))?.let {
             vm.refillRepetitions.observe(viewLifecycleOwner) { repetitions ->
                 it.text = repetitions.toString()
+            }
+        }
+
+        findPreference<MultiSelectListPreference>(getString(R.string.pref_refill_resource))?.let {
+            vm.refillResources.observe(viewLifecycleOwner) { refillResourcesMsg ->
+                it.summary = refillResourcesMsg
             }
         }
     }
