@@ -44,24 +44,7 @@
             app:summary="@string/p_screenshot_drops_summary" />
 
         <ListPreference
-            app:defaultValue="None"
-            app:entries="@array/battle_np_types_labels"
-            app:entryValues="@array/battle_np_types_values"
-            app:icon="@drawable/ic_star"
-            app:key="@string/pref_battle_np"
-            app:title="@string/p_cast_np"
-            app:useSimpleSummaryProvider="true" />
-
-        <SwitchPreferenceCompat
-            app:defaultValue="false"
-            app:icon="@drawable/ic_target"
-            app:key="@string/pref_auto_choose_target"
-            app:title="@string/p_auto_choose_target" />
-
-        <ListPreference
             app:defaultValue="-1"
-            app:entries="@array/boost_item_labels"
-            app:entryValues="@array/boost_item_values"
             app:icon="@drawable/ic_boost"
             app:key="@string/pref_boost_item"
             app:title="@string/p_boost_item"
@@ -69,25 +52,15 @@
 
         <SwitchPreferenceCompat
             app:icon="@drawable/ic_wand"
-            app:key="@string/pref_auto_skill_cmd_text"
-            app:title="@string/p_auto_skill_cmd_text"
-            app:summary="@string/p_auto_skill_cmd_text_summary" />
+            app:key="@string/pref_battle_config_cmd_text"
+            app:title="@string/p_battle_config_cmd_text"
+            app:summary="@string/p_battle_config_cmd_text_summary" />
 
         <!--    <SwitchPreferenceCompat-->
         <!--        app:defaultValue="false"-->
         <!--        app:key="@string/pref_guda_final"-->
         <!--        app:summary="Support for the new rewards screen on JP"-->
         <!--        app:title="GudaGuda Final Rerun" />-->
-    </PreferenceCategory>
-
-    <PreferenceCategory
-        app:key="fp_category"
-        app:title="@string/p_script_mode_friend_gacha">
-        <SwitchPreferenceCompat
-            app:defaultValue="true"
-            app:icon="@drawable/ic_friend"
-            app:key="@string/pref_friend_pts"
-            app:title="@string/p_friend_summon_only" />
     </PreferenceCategory>
 
     <PreferenceCategory
@@ -145,12 +118,5 @@
             app:icon="@drawable/ic_launch"
             app:key="@string/pref_auto_start_service"
             app:title="@string/p_auto_start_service" />
-
-        <SwitchPreferenceCompat
-            app:defaultValue="false"
-            app:icon="@drawable/ic_pause"
-            app:key="@string/pref_can_pause_script"
-            app:summary="@string/p_experimental"
-            app:title="@string/p_allow_pause_script" />
     </PreferenceCategory>
 </PreferenceScreen>

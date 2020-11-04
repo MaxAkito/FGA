@@ -6,10 +6,13 @@ import com.mathewsachin.fategrandautomata.StorageDirs
 import com.mathewsachin.fategrandautomata.imaging.DroidCvPattern
 import com.mathewsachin.fategrandautomata.scripts.IImageLoader
 import com.mathewsachin.fategrandautomata.scripts.enums.GameServerEnum
+import com.mathewsachin.fategrandautomata.scripts.enums.MaterialEnum
 import com.mathewsachin.fategrandautomata.scripts.prefs.IPreferences
 import com.mathewsachin.libautomata.IPattern
 import com.mathewsachin.libautomata.ScriptExitException
 import dagger.hilt.android.qualifiers.ApplicationContext
+import org.opencv.android.Utils
+import org.opencv.imgcodecs.Imgcodecs
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileNotFoundException
@@ -27,7 +30,7 @@ class ImageLoader @Inject constructor(
             val inputStream = FileInputStream(filepath)
 
             inputStream.use {
-                return DroidCvPattern(it, FileName)
+                return DroidCvPattern(it).tag(FileName)
             }
         }
 
@@ -42,7 +45,7 @@ class ImageLoader @Inject constructor(
         val inputStream = assets.open(filePath)
 
         inputStream.use {
-            return DroidCvPattern(it, filePath)
+            return DroidCvPattern(it).tag(filePath)
         }
     }
 
@@ -50,7 +53,7 @@ class ImageLoader @Inject constructor(
         GameServerEnum.En
     private var regionCachedPatterns = mutableMapOf<String, IPattern>()
 
-    override fun loadRegionPattern(path: String): IPattern {
+    override fun loadRegionPattern(path: String): IPattern = synchronized(regionCachedPatterns) {
         val server = prefs.gameServer
 
         // Reload Patterns on Server change
@@ -60,14 +63,9 @@ class ImageLoader @Inject constructor(
             currentGameServer = server
         }
 
-        if (!regionCachedPatterns.containsKey(path)) {
-            val pattern =
-                loadPatternWithFallback(path)
-
-            regionCachedPatterns[path] = pattern
+        return regionCachedPatterns.getOrPut(path) {
+            loadPatternWithFallback(path)
         }
-
-        return regionCachedPatterns[path]!!
     }
 
     /**
@@ -85,7 +83,7 @@ class ImageLoader @Inject constructor(
         return createPattern(currentGameServer, path)
     }
 
-    override fun clearImageCache() {
+    override fun clearImageCache() = synchronized(regionCachedPatterns) {
         for (pattern in regionCachedPatterns.values) {
             pattern.close()
         }
@@ -97,7 +95,7 @@ class ImageLoader @Inject constructor(
 
     private var supportCachedPatterns = mutableMapOf<String, IPattern>()
 
-    override fun clearSupportCache() {
+    override fun clearSupportCache() = synchronized(supportCachedPatterns) {
         for (pattern in supportCachedPatterns.values) {
             pattern.close()
         }
@@ -105,16 +103,59 @@ class ImageLoader @Inject constructor(
         supportCachedPatterns.clear()
     }
 
-    override fun loadSupportPattern(path: String): IPattern {
-        if (!supportCachedPatterns.containsKey(path)) {
-            val pattern = fileLoader(path)
+    override fun loadSupportPattern(path: String): IPattern = synchronized(supportCachedPatterns) {
+        return supportCachedPatterns.getOrPut(path) {
+            fileLoader(path)
                 ?: throw ScriptExitException(
                     context.getString(R.string.support_img_not_found, path, storageDirs.supportImgFolder)
                 )
+        }
+    }
 
-            supportCachedPatterns[path] = pattern
+    private val MaterialEnum.drawable
+        get() = when (this) {
+            MaterialEnum.Proof -> R.drawable.mat_proof
+            MaterialEnum.Bone -> R.drawable.mat_bone
+            MaterialEnum.Fang -> R.drawable.mat_fang
+            MaterialEnum.Dust -> R.drawable.mat_dust
+            MaterialEnum.Chain -> R.drawable.mat_chain
+            MaterialEnum.Stinger -> R.drawable.mat_stinger
+            MaterialEnum.Fluid -> R.drawable.mat_fluid
+            MaterialEnum.Stake -> R.drawable.mat_stake
+            MaterialEnum.Gunpowder -> R.drawable.mat_gunpowder
+            MaterialEnum.Seed -> R.drawable.mat_seed
+            MaterialEnum.GhostLantern -> R.drawable.mat_ghost_lantern
+            MaterialEnum.OctupletCrystal -> R.drawable.mat_octuplet_crystal
+            MaterialEnum.SerpentJewel -> R.drawable.mat_serpent_jewel
+            MaterialEnum.Feather -> R.drawable.mat_feather
+            MaterialEnum.Gear -> R.drawable.mat_gear
+            MaterialEnum.Page -> R.drawable.mat_page
+            MaterialEnum.HomunculusBaby -> R.drawable.mat_homunculus_baby
+            MaterialEnum.Horseshoe -> R.drawable.mat_horseshoe
+            MaterialEnum.Medal -> R.drawable.mat_medal
+            MaterialEnum.ShellOfReminiscence -> R.drawable.mat_shell_of_reminiscence
+            MaterialEnum.Magatama -> R.drawable.mat_magatama
+            MaterialEnum.EternalIce -> R.drawable.mat_ice
+            MaterialEnum.GiantRing -> R.drawable.mat_giant_ring
+            MaterialEnum.AuroraSteel -> R.drawable.mat_steel
+            MaterialEnum.Claw -> R.drawable.mat_claw
+            MaterialEnum.Heart -> R.drawable.mat_heart
+            MaterialEnum.DragonScale -> R.drawable.mat_scale
+            MaterialEnum.SpiritRoot -> R.drawable.mat_spirit_root
+            MaterialEnum.YoungHorn -> R.drawable.mat_young_horn
+            MaterialEnum.TearStone -> R.drawable.mat_tear_stone
+            MaterialEnum.Grease -> R.drawable.mat_grease
+            MaterialEnum.LampOfEvilSealing -> R.drawable.mat_lamp_of_evil_sealing
+            MaterialEnum.Scarab -> R.drawable.mat_scarab
+            MaterialEnum.Lanugo -> R.drawable.mat_lanugo
+            MaterialEnum.Gallstone -> R.drawable.mat_gallstone
+            MaterialEnum.MysteriousWine -> R.drawable.mat_mysterious_wine
         }
 
-        return supportCachedPatterns[path]!!
-    }
+    override fun loadMaterial(material: MaterialEnum) =
+        regionCachedPatterns.getOrPut("materials/$material") {
+            DroidCvPattern(
+                Utils.loadResource(context, material.drawable, Imgcodecs.IMREAD_GRAYSCALE)
+            )
+        }
 }

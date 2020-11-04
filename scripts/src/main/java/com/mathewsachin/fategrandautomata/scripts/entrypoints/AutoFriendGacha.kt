@@ -5,7 +5,6 @@ import com.mathewsachin.fategrandautomata.scripts.enums.GameServerEnum
 import com.mathewsachin.fategrandautomata.scripts.modules.Game
 import com.mathewsachin.libautomata.EntryPoint
 import com.mathewsachin.libautomata.ExitManager
-import com.mathewsachin.libautomata.IPlatformImpl
 import com.mathewsachin.libautomata.Location
 import javax.inject.Inject
 import kotlin.time.seconds
@@ -15,9 +14,8 @@ import kotlin.time.seconds
  */
 class AutoFriendGacha @Inject constructor(
     exitManager: ExitManager,
-    platformImpl: IPlatformImpl,
     fgAutomataApi: IFgoAutomataApi
-) : EntryPoint(exitManager, platformImpl, fgAutomataApi.messages), IFgoAutomataApi by fgAutomataApi {
+) : EntryPoint(exitManager), IFgoAutomataApi by fgAutomataApi {
     private val first10SummonClick = Location(1400, 1120)
     private val okClick = Location(1600, 1120)
     private val continueSummonClick = Location(1600, 1325)
@@ -25,10 +23,6 @@ class AutoFriendGacha @Inject constructor(
 
     override fun script(): Nothing {
         if (images.fpSummonContinue !in Game.continueSummonRegion) {
-            if (prefs.friendPtsOnly) {
-                isInFriendPtsSummon()
-            }
-
             first10SummonClick.click()
             0.3.seconds.wait()
             okClick.click()
@@ -48,16 +42,6 @@ class AutoFriendGacha @Inject constructor(
 
                 3.seconds.wait()
             } else skipRapidClick.click(15)
-        }
-    }
-
-    private fun isInFriendPtsSummon() {
-        val startRightSwipeLoc = Location(300, 500)
-        val endRightSwipeLoc = Location(2000, 500)
-
-        while (images.friendSummon !in Game.friendPtSummonCheck) {
-            swipe(startRightSwipeLoc, endRightSwipeLoc)
-            1.0.seconds.wait()
         }
     }
 }

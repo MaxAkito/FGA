@@ -1,15 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
-
-    <ListPreference
-        app:defaultValue="Battle"
-        app:entries="@array/script_mode_labels"
-        app:entryValues="@array/script_mode_values"
-        app:icon="@drawable/ic_script"
-        app:key="@string/pref_script_mode"
-        app:title="@string/p_script_mode"
-        app:useSimpleSummaryProvider="true" />
-
     <Preference
         app:icon="@drawable/ic_apple"
         app:key="@string/pref_nav_refill"
@@ -17,10 +7,10 @@
         app:title="@string/p_refill" />
 
     <Preference
-        app:icon="@drawable/ic_wand"
-        app:key="@string/pref_nav_auto_skill"
-        app:summary="@string/p_auto_skill_summary"
-        app:title="@string/p_auto_skill" />
+        app:icon="@drawable/ic_formation"
+        app:key="@string/pref_nav_battle_config"
+        app:summary="@string/p_battle_config_summary"
+        app:title="@string/p_battle_config" />
 
     <Preference
         app:icon="@drawable/ic_dots_horizontal"

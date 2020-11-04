@@ -1,16 +1,17 @@
 package com.mathewsachin.fategrandautomata.scripts.modules
 
 import com.mathewsachin.fategrandautomata.scripts.IFgoAutomataApi
+import com.mathewsachin.fategrandautomata.scripts.enums.SpamEnum
 import com.mathewsachin.fategrandautomata.scripts.models.*
+import com.mathewsachin.libautomata.IPattern
+import com.mathewsachin.libautomata.Region
 import kotlin.time.Duration
 import kotlin.time.seconds
 
 class AutoSkill(fgAutomataApi: IFgoAutomataApi) : IFgoAutomataApi by fgAutomataApi {
     private lateinit var battle: Battle
     private lateinit var card: Card
-
-    var isFinished = false
-        private set
+    private var isFinished = false
 
     private fun waitForAnimationToFinish(Timeout: Duration = 5.seconds) {
         val img = images.battle
@@ -40,6 +41,25 @@ class AutoSkill(fgAutomataApi: IFgoAutomataApi) : IFgoAutomataApi by fgAutomataA
         waitForAnimationToFinish()
     }
 
+    private val Skill.imageRegion
+        get() = Region(30, 30, 30, 30) + clickLocation
+
+    val skillSpamDelay = 0.25.seconds
+
+    private fun castServantSkill(skill: Skill.Servant, target: ServantTarget?) {
+        if (prefs.selectedBattleConfig.skillSpam != SpamEnum.None) {
+            skillTable[skill]?.image?.close()
+
+            // Some delay so we can take image of skill properly
+            skillSpamDelay.wait()
+
+            val image = skill.imageRegion.getPattern().tag("SKILL:$skill")
+            skillTable[skill] = SkillTableEntry(target, image)
+        }
+
+        castSkill(skill, target)
+    }
+
     private fun selectSkillTarget(target: ServantTarget) {
         target.clickLocation.click()
 
@@ -47,12 +67,6 @@ class AutoSkill(fgAutomataApi: IFgoAutomataApi) : IFgoAutomataApi by fgAutomataA
 
         // Exit any extra menu
         Game.battleExtraInfoWindowCloseClick.click()
-    }
-
-    private fun castNoblePhantasm(noblePhantasm: CommandCard.NP) {
-        battle.clickAttack()
-
-        card.clickNp(noblePhantasm)
     }
 
     private fun openMasterSkillMenu() {
@@ -105,22 +119,49 @@ class AutoSkill(fgAutomataApi: IFgoAutomataApi) : IFgoAutomataApi by fgAutomataA
         Game.battleExtraInfoWindowCloseClick.click()
     }
 
-    fun act(action: AutoSkillAction) = when (action) {
-        is AutoSkillAction.CardsBeforeNP -> {
-            battle.clickAttack()
-
-            card.clickCommandCards(action.count)
-        }
-        is AutoSkillAction.NP -> castNoblePhantasm(action.np)
-        is AutoSkillAction.ServantSkill -> castSkill(action.skill, action.target)
+    private fun act(action: AutoSkillAction) = when (action) {
+        is AutoSkillAction.Atk -> card.atk = action
+        is AutoSkillAction.ServantSkill -> castServantSkill(action.skill, action.target)
         is AutoSkillAction.MasterSkill -> castMasterSkill(action.skill, action.target)
         is AutoSkillAction.TargetEnemy -> selectEnemyTarget(action.enemy)
         is AutoSkillAction.OrderChange -> orderChange(action)
-        AutoSkillAction.NoOp -> Unit
     }
 
     fun resetState() {
         isFinished = false
+
+        skillTable.values.forEach { it.image.close() }
+        skillTable.clear()
+    }
+
+    private data class SkillTableEntry(
+        val target: ServantTarget?,
+        val image: IPattern
+    )
+
+    private var skillTable = mutableMapOf<Skill.Servant, SkillTableEntry>()
+
+    fun canSpam(spam: SpamEnum): Boolean {
+        val weCanSpam = spam == SpamEnum.Spam
+        val weAreInDanger = spam == SpamEnum.Danger
+                && battle.state.hasChosenTarget
+
+        return (weCanSpam || weAreInDanger) && isFinished
+    }
+
+    private fun skillSpam() {
+        skillSpamDelay.wait()
+
+        if (canSpam(prefs.selectedBattleConfig.skillSpam)) {
+            for ((skill, entry) in skillTable) {
+                if (entry.image in skill.imageRegion) {
+                    castSkill(skill, entry.target)
+
+                    // Some delay for skill icon to be loaded
+                    skillSpamDelay.wait()
+                }
+            }
+        }
     }
 
     lateinit var commandTable: AutoSkillCommand
@@ -130,15 +171,15 @@ class AutoSkill(fgAutomataApi: IFgoAutomataApi) : IFgoAutomataApi by fgAutomataA
         card = CardModule
 
         commandTable = AutoSkillCommand.parse(
-            prefs.selectedAutoSkillConfig.skillCommand
+            prefs.selectedBattleConfig.skillCommand
         )
 
         resetState()
     }
 
     fun execute() {
-        val stage = battle.state.runState.stage
-        val turn = battle.state.runState.turn
+        val stage = battle.state.stage
+        val turn = battle.state.turn
 
         val commandList = commandTable[stage, turn]
 
@@ -149,6 +190,8 @@ class AutoSkill(fgAutomataApi: IFgoAutomataApi) : IFgoAutomataApi by fgAutomataA
         } else if (stage >= commandTable.lastStage) {
             // this will allow NP spam after all commands have been executed
             isFinished = true
+
+            skillSpam()
         }
     }
 }

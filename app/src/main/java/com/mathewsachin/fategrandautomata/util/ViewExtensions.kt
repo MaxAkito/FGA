@@ -1,31 +1,19 @@
 package com.mathewsachin.fategrandautomata.util
 
-import android.view.View
-import com.mathewsachin.fategrandautomata.R
-import com.mathewsachin.fategrandautomata.scripts.enums.RefillResourceEnum
+import android.content.Context
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.view.ContextThemeWrapper
+import com.mathewsachin.fategrandautomata.accessibility.ScriptRunnerUserInterface
 
-fun View.setThrottledClickListener(Listener: () -> Unit) {
-    var isWorking = false
+fun Context.dayNightThemed() = ContextThemeWrapper(this, androidx.appcompat.R.style.Theme_AppCompat_DayNight_Dialog)
 
-    setOnClickListener {
-        if (isWorking) {
-            return@setOnClickListener
-        }
+fun showOverlayDialog(context: Context, builder: AlertDialog.Builder.() -> Unit): AlertDialog {
+    val alertDialog = AlertDialog.Builder(context.dayNightThemed())
+        .apply(builder)
+        .create()
 
-        isWorking = true
+    alertDialog.window?.setType(ScriptRunnerUserInterface.overlayType)
+    alertDialog.show()
 
-        try {
-            Listener()
-        } finally {
-            isWorking = false
-        }
-    }
+    return alertDialog
 }
-
-val RefillResourceEnum.stringRes
-    get() = when (this) {
-        RefillResourceEnum.SQ -> R.string.p_refill_type_sq
-        RefillResourceEnum.Gold -> R.string.p_refill_type_gold
-        RefillResourceEnum.Silver -> R.string.p_refill_type_silver
-        RefillResourceEnum.Bronze -> R.string.p_refill_type_bronze
-    }

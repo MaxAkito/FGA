@@ -51,18 +51,18 @@ class AndroidImpl @Inject constructor(
         Handler(Looper.getMainLooper())
     }
 
-    override fun messageBox(Title: String, Message: String, Error: Exception?) {
+    override fun messageBox(Title: String, Message: String, Error: Exception?, onDismiss: () -> Unit) {
         handler.post {
-            service.showMessageBox(Title, Message, Error)
+            service.showMessageBox(Title, Message, Error, onDismiss)
         }
     }
 
-    override fun highlight(Region: Region, Duration: Duration) {
+    override fun highlight(Region: Region, Duration: Duration, success: Boolean) {
         // We can't draw over the notch area
         val region = Region - cutoutManager.getCutoutAppliedRegion().location
 
         GlobalScope.launch {
-            highlightManager.add(region)
+            highlightManager.add(region, success)
             delay(Duration.toLongMilliseconds())
             highlightManager.remove(region)
         }

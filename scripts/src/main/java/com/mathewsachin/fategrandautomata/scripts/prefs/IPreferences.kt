@@ -1,6 +1,5 @@
 package com.mathewsachin.fategrandautomata.scripts.prefs
 
-import com.mathewsachin.fategrandautomata.scripts.enums.BattleNoblePhantasmEnum
 import com.mathewsachin.fategrandautomata.scripts.enums.GameServerEnum
 import com.mathewsachin.fategrandautomata.scripts.enums.ScriptModeEnum
 import com.mathewsachin.libautomata.IPlatformPrefs
@@ -10,11 +9,8 @@ interface IPreferences {
     var scriptMode: ScriptModeEnum
     var gameServer: GameServerEnum
     val skillConfirmation: Boolean
-    val autoSkillList: Set<String>
-    val autoSkillPreferences: List<IAutoSkillPreferences>
-    var selectedAutoSkillConfig: IAutoSkillPreferences
-    val castNoblePhantasm: BattleNoblePhantasmEnum
-    val autoChooseTarget: Boolean
+    val battleConfigs: List<IBattleConfig>
+    var selectedBattleConfig: IBattleConfig
     val storySkip: Boolean
     val withdrawEnabled: Boolean
     val stopOnCEDrop: Boolean
@@ -26,19 +22,18 @@ interface IPreferences {
     val gudaFinal: Boolean
     val recordScreen: Boolean
     val skillDelay: Duration
-    val friendPtsOnly: Boolean
     val screenshotDrops: Boolean
-    val canPauseScript: Boolean
     val maxGoldEmberSetSize: Int
 
     val stageCounterSimilarity: Double
     val waitBeforeTurn: Duration
+    val waitBeforeCards: Duration
 
     val support: ISupportPreferencesCommon
     val platformPrefs: IPlatformPrefs
     val gestures: IGesturesPreferences
 
-    fun forAutoSkillConfig(id: String): IAutoSkillPreferences
-    fun addAutoSkillConfig(id: String)
-    fun removeAutoSkillConfig(id: String)
+    fun forBattleConfig(id: String): IBattleConfig
+    fun addBattleConfig(id: String)
+    fun removeBattleConfig(id: String)
 }

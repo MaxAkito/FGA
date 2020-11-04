@@ -12,17 +12,14 @@ import com.mathewsachin.fategrandautomata.R
 import com.mathewsachin.fategrandautomata.ui.MainFragmentDirections
 import com.mathewsachin.fategrandautomata.util.nav
 import dagger.hilt.android.AndroidEntryPoint
-import mu.KotlinLogging
 import com.mathewsachin.fategrandautomata.prefs.R.string as prefKeys
-
-private val logger = KotlinLogging.logger {}
 
 @AndroidEntryPoint
 class MainSettingsFragment : PreferenceFragmentCompat() {
-    val goToAutoSkill = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+    val goToBattleConfigList = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         if (it.values.all { m -> m }) {
             val action = MainFragmentDirections
-                .actionMainFragmentToAutoSkillListFragment()
+                .actionMainFragmentToBattleConfigListFragment()
 
             nav(action)
         }
@@ -42,13 +39,13 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
             }
         }
 
-        findPreference<Preference>(getString(prefKeys.pref_nav_auto_skill))?.let {
+        findPreference<Preference>(getString(prefKeys.pref_nav_battle_config))?.let {
             it.setOnPreferenceClickListener {
                 val permissions = arrayOf(
                     Manifest.permission.WRITE_EXTERNAL_STORAGE,
                     Manifest.permission.READ_EXTERNAL_STORAGE
                 )
-                goToAutoSkill.launch(permissions)
+                goToBattleConfigList.launch(permissions)
 
                 true
             }

@@ -18,18 +18,17 @@ class PreferencesImpl @Inject constructor(
 
     override val skillConfirmation by prefs.skillConfirmation
 
-    override var autoSkillList by prefs.autoSkillList
-        private set
+    private var battleConfigList by prefs.battleConfigList
 
-    override val autoSkillPreferences
-        get() = autoSkillList.map { forAutoSkillConfig(it) }
+    override val battleConfigs
+        get() = battleConfigList.map { forBattleConfig(it) }
             .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
 
     private var selectedAutoSkillConfigKey by prefs.selectedAutoSkillConfig
 
-    private var lastConfig: IAutoSkillPreferences? = null
+    private var lastConfig: IBattleConfig? = null
 
-    override var selectedAutoSkillConfig: IAutoSkillPreferences
+    override var selectedBattleConfig: IBattleConfig
         get() {
             val config = lastConfig.let {
                 val currentSelectedKey =
@@ -37,7 +36,7 @@ class PreferencesImpl @Inject constructor(
 
                 if (it != null && it.id == currentSelectedKey) {
                     it
-                } else forAutoSkillConfig(currentSelectedKey)
+                } else forBattleConfig(currentSelectedKey)
             }
 
             lastConfig = config
@@ -48,10 +47,6 @@ class PreferencesImpl @Inject constructor(
             selectedAutoSkillConfigKey = value.id
         }
 
-    override val castNoblePhantasm by prefs.castNoblePhantasm
-
-    override val autoChooseTarget by prefs.autoChooseTarget
-
     override val storySkip by prefs.storySkip
 
     override val withdrawEnabled by prefs.withdrawEnabled
@@ -59,8 +54,6 @@ class PreferencesImpl @Inject constructor(
     override val stopOnCEDrop by prefs.stopOnCEDrop
 
     override val stopOnCEGet by prefs.stopOnCEGet
-
-    override val friendPtsOnly by prefs.friendPtsOnly
 
     override val boostItemSelectionMode by prefs.boostItemSelectionMode
 
@@ -79,37 +72,37 @@ class PreferencesImpl @Inject constructor(
 
     override val screenshotDrops by prefs.screenshotDrops
 
-    override val canPauseScript by prefs.canPauseScript
-
     override val stageCounterSimilarity by prefs.stageCounterSimilarity.map { it / 100.0 }
 
     override val waitBeforeTurn by prefs.waitBeforeTurn.map { it.milliseconds }
 
+    override val waitBeforeCards by prefs.waitBeforeCards.map { it.milliseconds }
+
     override val maxGoldEmberSetSize by prefs.maxGoldEmberSetSize
 
-    private val autoSkillMap = mutableMapOf<String, IAutoSkillPreferences>()
+    private val autoSkillMap = mutableMapOf<String, IBattleConfig>()
 
-    override fun forAutoSkillConfig(id: String): IAutoSkillPreferences =
+    override fun forBattleConfig(id: String): IBattleConfig =
         autoSkillMap.getOrPut(id) {
-            AutoSkillPreferences(
+            BattleConfig(
                 id,
                 prefs,
                 storageDirs
             )
         }
 
-    override fun addAutoSkillConfig(id: String) {
-        autoSkillList = autoSkillList
+    override fun addBattleConfig(id: String) {
+        battleConfigList = battleConfigList
             .toMutableSet()
             .apply { add(id) }
     }
 
-    override fun removeAutoSkillConfig(id: String) {
+    override fun removeBattleConfig(id: String) {
         prefs.maker.context.deleteSharedPreferences(id)
         autoSkillMap.remove(id)
-        prefs.removeAutoSkillConfig(id)
+        prefs.removeBattleConfig(id)
 
-        autoSkillList = autoSkillList
+        battleConfigList = battleConfigList
             .toMutableSet()
             .apply { remove(id) }
 
@@ -122,9 +115,6 @@ class PreferencesImpl @Inject constructor(
         ISupportPreferencesCommon {
         override val mlbSimilarity by prefs.mlbSimilarity.map { it / 100.0 }
 
-        override val supportSwipeMultiplier by prefs.supportSwipeMultiplier
-            .map { it / 100.0 }
-
         override val swipesPerUpdate by prefs.supportSwipesPerUpdate
 
         override val maxUpdates by prefs.supportMaxUpdates
@@ -136,6 +126,9 @@ class PreferencesImpl @Inject constructor(
         override val minSimilarity by prefs.minSimilarity.map { it / 100.0 }
 
         override val waitMultiplier by prefs.waitMultiplier
+            .map { it / 100.0 }
+
+        override val swipeMultiplier by prefs.swipeMultiplier
             .map { it / 100.0 }
     }
 

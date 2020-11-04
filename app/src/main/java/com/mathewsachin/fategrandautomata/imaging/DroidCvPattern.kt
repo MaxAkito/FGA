@@ -4,15 +4,15 @@ import com.mathewsachin.libautomata.IPattern
 import com.mathewsachin.libautomata.Match
 import com.mathewsachin.libautomata.Region
 import com.mathewsachin.libautomata.Size
-import mu.KotlinLogging
 import org.opencv.core.*
 import org.opencv.imgcodecs.Imgcodecs
 import org.opencv.imgproc.Imgproc
+import timber.log.Timber
+import timber.log.debug
+import timber.log.verbose
 import java.io.InputStream
 import kotlin.math.roundToInt
 import org.opencv.core.Size as CvSize
-
-private val logger = KotlinLogging.logger {}
 
 class DroidCvPattern(
     private var Mat: Mat? = Mat(),
@@ -49,9 +49,7 @@ class DroidCvPattern(
         alpha = matWithAlpha.alpha
     }
 
-    constructor(Stream: InputStream, tag: String) : this(makeMat(Stream)) {
-        this.tag = tag
-    }
+    constructor(Stream: InputStream) : this(makeMat(Stream))
 
     init {
         require(Mat != null) { "Mat should not be null" }
@@ -81,14 +79,15 @@ class DroidCvPattern(
     override fun resize(Size: Size): IPattern {
         val result = Mat()
         resize(result, Size)
-        return DroidCvPattern(result)
+        return DroidCvPattern(result).tag(tag)
     }
 
     override fun resize(Target: IPattern, Size: Size) {
         if (Target is DroidCvPattern) {
             resize(Target.Mat!!, Size)
-            Target.tag = tag
         }
+
+        Target.tag(tag)
     }
 
     private fun match(Template: IPattern): DisposableMat {
@@ -113,25 +112,13 @@ class DroidCvPattern(
                     )
                 }
             } else {
-                logger.debug { "Skipped matching $Template: Region out of bounds" }
+                Timber.verbose { "Skipped matching $Template: Region out of bounds" }
             }
 
             return result
         }
 
         return DisposableMat()
-    }
-
-    override fun isMatch(Template: IPattern, Similarity: Double): Boolean {
-        match(Template).use {
-            val minMaxLocResult = Core.minMaxLoc(it.Mat)
-
-            val score = minMaxLocResult.maxVal
-
-            logger.debug { "Matched $Template with a score of $score" }
-
-            return score >= Similarity
-        }
     }
 
     override fun findMatches(Template: IPattern, Similarity: Double) = sequence {
@@ -153,7 +140,7 @@ class DroidCvPattern(
 
                     val match = Match(region, score)
 
-                    logger.debug { "Matched $Template with a score of ${match.score}" }
+                    Timber.debug { "Matched $Template with a score of ${match.score}" }
                     yield(match)
 
                     val mask = DisposableMat()
@@ -168,7 +155,7 @@ class DroidCvPattern(
                         )
                     }
                 } else {
-                    logger.debug { "Stopped matching $Template at score ($score) < similarity ($Similarity)" }
+                    Timber.verbose { "Stopped matching $Template at score ($score) < similarity ($Similarity)" }
                     break
                 }
             }
@@ -186,14 +173,14 @@ class DroidCvPattern(
 
         val result = Mat(Mat, rect)
 
-        return DroidCvPattern(result).also { it.tag = tag }
+        return DroidCvPattern(result).tag(tag)
     }
 
     override fun save(FileName: String) {
         Imgcodecs.imwrite(FileName, Mat)
     }
 
-    override fun copy() = DroidCvPattern(Mat?.clone()).also {
-        it.tag = tag
-    }
+    override fun copy() = DroidCvPattern(Mat?.clone()).tag(tag)
+
+    override fun tag(tag: String) = apply { this.tag = tag }
 }
