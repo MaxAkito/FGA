@@ -5,6 +5,8 @@ Auto-battle app for F/GO (Android 7 or later, no need for Root). Forked from <a 
 
 Main feature of this fork is allowing alternative package name APKs. Specifically copied ones and Better FGO, if you have one you wanted to be added feel free to ask.
 
+Accepted alterantive package names include:  com.aniplex.fategrandorder.eo, com.aniplex.fategrandordes, io.rayshift.betterfgo and io.rayshift.betterfgo.en
+
 ## Acknowledgements
 - [FGO-Lua][FGOLua] developers are the real deal. Without them this app won't exist.
 - We're using OpenCV Android package from: https://github.com/iamareebjamal/opencv-android
