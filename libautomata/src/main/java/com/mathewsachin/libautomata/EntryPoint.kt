@@ -5,11 +5,7 @@ import kotlin.concurrent.thread
 /**
  * Basic class for all "script modes", such as Battle, Lottery and Summoning.
  */
-abstract class EntryPoint(
-    val exitManager: ExitManager,
-    val platformImpl: IPlatformImpl,
-    private val messages: IAutomataMessages
-) {
+abstract class EntryPoint(val exitManager: ExitManager) {
     /**
      * Starts the logic of the script mode in a new thread.
      */
@@ -27,30 +23,10 @@ abstract class EntryPoint(
     private fun scriptRunner() {
         try {
             script()
-        } catch (e: ScriptAbortException) {
-            // Script stopped by user
-            if (e.message.isNotBlank()) {
-                platformImpl.messageBox(messages.scriptExited, e.message)
-            }
-
-            platformImpl.notify(messages.stoppedByUser)
-        } catch (e: ScriptExitException) {
-            scriptExitListener.invoke(e)
-
-            // Show the message box only if there is some message
-            if (e.message.isNotBlank()) {
-                val msg = messages.scriptExited
-                platformImpl.messageBox(msg, e.message)
-                platformImpl.notify(msg)
-            }
         } catch (e: Exception) {
-            println(e.messageAndStackTrace)
-
             scriptExitListener.invoke(e)
 
-            val msg = messages.unexpectedError
-            platformImpl.messageBox(msg, e.messageAndStackTrace, e)
-            platformImpl.notify(msg)
+            scriptExitListener = { }
         }
     }
 
@@ -63,11 +39,11 @@ abstract class EntryPoint(
      * @throws ScriptAbortException when the user stopped the script
      * @throws ScriptExitException when an exit condition was reached
      */
-    protected abstract fun script(): Nothing
+    abstract fun script(): Nothing
 
     /**
      * A listener function, which is called when the script detected an exit condition or when an
      * unexpected error occurred.
      */
-    var scriptExitListener: (Exception?) -> Unit = { }
+    var scriptExitListener: (Exception) -> Unit = { }
 }

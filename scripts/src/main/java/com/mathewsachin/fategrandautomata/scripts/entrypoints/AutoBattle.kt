@@ -1,16 +1,15 @@
 package com.mathewsachin.fategrandautomata.scripts.entrypoints
 
-import com.mathewsachin.fategrandautomata.StorageDirs
+import com.mathewsachin.fategrandautomata.IStorageProvider
 import com.mathewsachin.fategrandautomata.scripts.IFgoAutomataApi
+import com.mathewsachin.fategrandautomata.scripts.ISwipeLocations
 import com.mathewsachin.fategrandautomata.scripts.enums.GameServerEnum
+import com.mathewsachin.fategrandautomata.scripts.enums.MaterialEnum
 import com.mathewsachin.fategrandautomata.scripts.models.BoostItem
 import com.mathewsachin.fategrandautomata.scripts.models.RefillResource
 import com.mathewsachin.fategrandautomata.scripts.modules.*
 import com.mathewsachin.fategrandautomata.scripts.prefs.IPreferences
 import com.mathewsachin.libautomata.*
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.*
 import javax.inject.Inject
 import kotlin.math.absoluteValue
 import kotlin.time.seconds
@@ -27,11 +26,11 @@ fun IFgoAutomataApi.isInSupport(): Boolean {
  */
 open class AutoBattle @Inject constructor(
     exitManager: ExitManager,
-    platformImpl: IPlatformImpl,
     fgAutomataApi: IFgoAutomataApi,
-    val storageDirs: StorageDirs
-) : EntryPoint(exitManager, platformImpl, fgAutomataApi.messages), IFgoAutomataApi by fgAutomataApi {
-    private val support = Support(fgAutomataApi)
+    val storageProvider: IStorageProvider,
+    swipeLocations: ISwipeLocations
+) : EntryPoint(exitManager), IFgoAutomataApi by fgAutomataApi {
+    private val support = Support(fgAutomataApi, swipeLocations)
     private val card = Card(fgAutomataApi)
     private val battle = Battle(fgAutomataApi)
     private val autoSkill = AutoSkill(fgAutomataApi)
@@ -40,6 +39,7 @@ open class AutoBattle @Inject constructor(
     private var withdrawCount = 0
     private var isContinuing = false
     private var partySelected = false
+    private var matsGot = mutableMapOf<MaterialEnum, Int>()
 
     override fun script(): Nothing {
         init()
@@ -49,11 +49,13 @@ open class AutoBattle @Inject constructor(
         } catch (e: ScriptExitException) {
             throw ScriptExitException(makeExitMessage(e.message))
         } catch (e: ScriptAbortException) {
-            val msg = if (e.message.isBlank())
-                messages.stoppedByUser
-            else e.message
+            val msg = makeExitMessage(
+                if (e.message.isBlank())
+                    messages.stoppedByUser
+                else e.message
+            )
 
-            throw ScriptAbortException(makeExitMessage(msg))
+            throw ScriptAbortException(msg)
         } catch (e: Exception) {
             throw Exception(makeExitMessage("${messages.unexpectedError}: ${e.message}"), e)
         } finally {
@@ -67,7 +69,16 @@ open class AutoBattle @Inject constructor(
         appendLine(reason)
         appendLine()
 
-        appendLine(makeRefillAndRunsMessage())
+        makeRefillAndRunsMessage().let { msg ->
+            if (msg.isNotBlank()) {
+                appendLine(msg)
+            }
+        }
+
+        if (prefs.selectedBattleConfig.materials.isNotEmpty()) {
+            appendLine(messages.materials(matsGot))
+            appendLine()
+        }
 
         appendLine(messages.time(battle.state.totalBattleTime))
 
@@ -101,13 +112,14 @@ open class AutoBattle @Inject constructor(
             { needsToWithdraw() } to { withdraw() },
             { needsToStorySkip() } to { skipStory() },
             { isFriendRequestScreen() } to { skipFriendRequestScreen() },
-            { isCeReward() } to { ceReward() }
+            { isBond10CEReward() } to { bond10CEReward() },
+            { isCeRewardDetails() } to { ceRewardDetails() }
             //{ isGudaFinalRewardsScreen() } to { gudaFinalReward() }
         )
 
         // Loop through SCREENS until a Validator returns true
         while (true) {
-            val actor = screenshotManager.useSameSnapIn {
+            val actor = useSameSnapIn {
                 screens
                     .asSequence()
                     .filter { (validator, _) -> validator() }
@@ -133,6 +145,11 @@ open class AutoBattle @Inject constructor(
         card.init(autoSkill, battle)
 
         support.init()
+
+        // Set all Materials to 0
+        prefs.selectedBattleConfig
+            .materials
+            .associateWithTo(matsGot) { 0 }
     }
 
     /**
@@ -144,6 +161,9 @@ open class AutoBattle @Inject constructor(
      * Resets the battle state, clicks on the quest and refills the AP if needed.
      */
     private fun menu() {
+        // In case the repeat loop breaks and we end up in menu (like withdrawing from quests)
+        isContinuing = false
+
         battle.resetState()
 
         showRefillsAndRunsMessage()
@@ -174,29 +194,43 @@ open class AutoBattle @Inject constructor(
         )
 
         return cases.any { (image, region) -> image in region }
-                || Game.resultCeRewardRegion.exists(images.bond10Reward, Similarity = ceRewardSimilarity)
+    }
+
+    private fun isBond10CEReward() =
+        Game.resultCeRewardRegion.exists(images.bond10Reward, Similarity = 0.75)
+
+    /**
+     * It seems like we need to click on CE (center of screen) to accept them
+     */
+    private fun bond10CEReward() =
+        Game.scriptRegion.center.click()
+
+    private fun isCeRewardDetails() =
+        images.ceDetails in Game.resultCeRewardDetailsRegion
+
+    private fun ceRewardDetails() {
+        if (prefs.stopOnCEGet) {
+            throw ScriptExitException(messages.ceGet)
+        } else notify(messages.ceGet)
+
+        Game.resultCeRewardCloseClick.click()
     }
 
     /**
      * Clicks through the reward screens.
      */
     private fun result() {
-        if (images.ceDrop in Game.resultCeDropRegion) {
-            val msg = messages.ceDropped
-            if (prefs.stopOnCEDrop) {
-                throw ScriptExitException(msg)
-            } else notify(msg)
-        }
-
-        if (prefs.screenshotDrops)
-            Game.resultClick.click(15)
-        else Game.resultNextClick.click(20)
+        Game.resultClick.click(15)
     }
 
     private fun isInDropsScreen() =
         images.matRewards in Game.resultMatRewardsRegion
 
     private fun dropScreen() {
+        checkCEDrops()
+
+        trackMaterials()
+
         if (prefs.screenshotDrops) {
             screenshotDrops()
         }
@@ -204,34 +238,53 @@ open class AutoBattle @Inject constructor(
         Game.resultNextClick.click(5)
     }
 
-    private fun screenshotDrops() {
-        0.5.seconds.wait()
+    private fun checkCEDrops() {
+        val starsRegion = Region(40, -40, 80, 40)
 
-        val dropsFolder = File(
-            storageDirs.storageRoot,
-            "drops"
-        )
+        val ceDropped = Game.scriptRegion
+            .findAll(images.dropCE)
+            .map { (region, _) ->
+                starsRegion + region.location
+            }
+            .any { images.dropCEStars in it }
 
-        if (!dropsFolder.exists()) {
-            dropsFolder.mkdirs()
+        if (ceDropped) {
+            val msg = messages.ceDropped
+            if (prefs.stopOnCEDrop) {
+                throw ScriptExitException(msg)
+            } else notify(msg)
+        }
+    }
+
+    private fun trackMaterials() {
+        for (material in prefs.selectedBattleConfig.materials) {
+            val pattern = images.material(material)
+
+            // TODO: Make the search region smaller
+            val count = Game.scriptRegion
+                .findAll(pattern)
+                .count()
+
+            // Increment material count
+            matsGot.merge(material, count, Int::plus)
         }
 
-        val sdf = SimpleDateFormat("dd-M-yyyy-hh-mm-ss", Locale.US)
-        val timeString = sdf.format(Date())
+        if (prefs.refill.shouldLimitMats) {
+            val totalMats = matsGot
+                .values
+                .sum()
+
+            if (totalMats >= prefs.refill.limitMats) {
+                throw ScriptExitException(messages.farmedMaterials(totalMats))
+            }
+        }
+    }
+
+    private fun screenshotDrops() {
+        val drops = mutableListOf<IPattern>()
 
         for (i in 0..1) {
-            val dropFileName = "${timeString}.${i}.png"
-
-            val shotService = screenshotManager.screenshotService
-            val shot = if (shotService is IColorScreenshotProvider) {
-                shotService.takeColorScreenshot()
-            } else screenshotManager.getScreenshot()
-
-            shot.use {
-                it.save(
-                    File(dropsFolder, dropFileName).absolutePath
-                )
-            }
+            drops.add(takeColorScreenshot())
 
             // check if we need to scroll to see more drops
             if (images.dropScrollbar in Game.resultDropScrollbarRegion) {
@@ -239,15 +292,15 @@ open class AutoBattle @Inject constructor(
                 Location(2306, 1032).click()
             } else break
         }
+
+        storageProvider.dropScreenshot(drops)
     }
 
     private fun isRepeatScreen() =
-        when (prefs.gameServer) {
-            GameServerEnum.En, GameServerEnum.Jp, GameServerEnum.Cn -> {
-                images.confirm in Game.continueRegion
-            }
-            else -> false
-        }
+        // Not yet on TW
+        if (prefs.gameServer != GameServerEnum.Tw) {
+            images.confirm in Game.continueRegion
+        } else false
 
     private fun repeatQuest() {
         // Needed to show we don't need to enter the "StartQuest" function
@@ -264,24 +317,11 @@ open class AutoBattle @Inject constructor(
     }
 
     private fun isFriendRequestScreen() =
-        images.friendRequest in Game.resultFriendRequestRegion
+        images.supportExtra in Game.resultFriendRequestRegion
 
     private fun skipFriendRequestScreen() {
         // Friend request dialogue. Appears when non-friend support was selected this battle. Ofc it's defaulted not sending request.
         Game.resultFriendRequestRejectClick.click()
-    }
-
-    private fun isCeReward() =
-        Game.resultCeRewardDetailsRegion.exists(images.bond10Reward, Similarity = ceRewardSimilarity)
-
-    val ceRewardSimilarity = 0.75
-
-    private fun ceReward() {
-        if (prefs.stopOnCEGet) {
-            throw ScriptExitException(messages.ceGet)
-        } else notify(messages.ceGet)
-
-        Game.resultCeRewardCloseClick.click()
     }
 
     /**
@@ -299,7 +339,7 @@ open class AutoBattle @Inject constructor(
     private fun support() {
         // Friend selection
         val hasSelectedSupport =
-            support.selectSupport(prefs.selectedAutoSkillConfig.support.selectionMode)
+            support.selectSupport(prefs.selectedBattleConfig.support.selectionMode, isContinuing)
 
         if (hasSelectedSupport && !isContinuing) {
             4.seconds.wait()
@@ -328,9 +368,8 @@ open class AutoBattle @Inject constructor(
         }
 
         // Withdraw Region can vary depending on if you have Command Spells/Quartz
-        val withdrawRegion = Game.withdrawRegion
-            .findAll(images.withdraw)
-            .firstOrNull() ?: return
+        val withdrawRegion = Game.withdrawRegion.find(images.withdraw)
+            ?: return
 
         withdrawRegion.Region.click()
 
@@ -387,13 +426,14 @@ open class AutoBattle @Inject constructor(
     private fun refillStamina() {
         val refillPrefs = prefs.refill
 
-        if (refillPrefs.enabled && stonesUsed < refillPrefs.repetitions) {
-            when (val resource = RefillResource.of(refillPrefs.resource)) {
-                is RefillResource.Single -> resource.clickLocation.click()
-                is RefillResource.Multiple -> resource.items.forEach {
-                    it.clickLocation.click()
-                }
-            }
+        if (refillPrefs.enabled
+            && stonesUsed < refillPrefs.repetitions
+            && refillPrefs.resources.isNotEmpty()
+        ) {
+
+            refillPrefs.resources
+                .map { RefillResource.of(it) }
+                .forEach { it.clickLocation.click() }
 
             1.seconds.wait()
             Game.staminaOkClick.click()
@@ -414,18 +454,17 @@ open class AutoBattle @Inject constructor(
      * changed to the configured one by clicking on the little dots above the party names.
      */
     fun selectParty() {
-        val party = prefs.selectedAutoSkillConfig.party
+        val party = prefs.selectedBattleConfig.party
 
         if (!partySelected && party in Game.partySelectionArray.indices) {
             val currentParty = Game.selectedPartyRegion
-                .findAll(images.selectedParty)
-                .map { match ->
+                .find(images.selectedParty)
+                ?.let { match ->
                     // Find party with min distance from center of matched region
-                    Game.partySelectionArray.withIndex().minBy {
+                    Game.partySelectionArray.withIndex().minByOrNull {
                         (it.value.X - match.Region.center.X).absoluteValue
                     }?.index
                 }
-                .firstOrNull()
 
             /* If the currently selected party cannot be detected, we need to switch to a party
                which was not configured. The reason is that the "Start Quest" button becomes
@@ -500,7 +539,7 @@ open class AutoBattle @Inject constructor(
         val message = makeRefillAndRunsMessage()
 
         if (message.isNotBlank()) {
-            platformImpl.toast(message)
+            toast(message)
         }
     }
 
