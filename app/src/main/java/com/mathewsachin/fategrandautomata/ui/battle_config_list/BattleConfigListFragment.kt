@@ -6,32 +6,25 @@ import android.view.*
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
-import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.gson.Gson
 import com.mathewsachin.fategrandautomata.R
+import com.mathewsachin.fategrandautomata.databinding.BattleConfigListBinding
 import com.mathewsachin.fategrandautomata.scripts.prefs.IBattleConfig
 import com.mathewsachin.fategrandautomata.scripts.prefs.IPreferences
 import com.mathewsachin.fategrandautomata.util.nav
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.android.synthetic.main.battle_config_list.*
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import mva3.adapter.ListSection
 import mva3.adapter.MultiViewAdapter
 import mva3.adapter.util.Mode
-import timber.log.Timber
-import timber.log.error
-import java.util.*
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class BattleConfigListFragment : Fragment(R.layout.battle_config_list) {
+class BattleConfigListFragment : Fragment() {
     @Inject
     lateinit var preferences: IPreferences
 
@@ -43,10 +36,17 @@ class BattleConfigListFragment : Fragment(R.layout.battle_config_list) {
 
     val vm: BattleConfigListViewModel by activityViewModels()
 
+    lateinit var binding: BattleConfigListBinding
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
+        BattleConfigListBinding.inflate(inflater, container, false)
+            .also { binding = it }
+            .root
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        battle_config_add_btn.setOnClickListener {
+        binding.battleConfigAddBtn.setOnClickListener {
             addOnBtnClick()
         }
 
@@ -55,7 +55,7 @@ class BattleConfigListFragment : Fragment(R.layout.battle_config_list) {
         vm.battleConfigItems.observe(viewLifecycleOwner) { items ->
             listSection.set(items)
 
-            battle_config_no_items.visibility =
+            binding.battleConfigNoItems.visibility =
                 if (items.isEmpty()) View.VISIBLE
                 else View.GONE
         }
@@ -68,7 +68,7 @@ class BattleConfigListFragment : Fragment(R.layout.battle_config_list) {
         adapter = MultiViewAdapter()
 
         adapter.registerItemBinders(BattleConfigListBinder({
-            editItem(it.id)
+            editItem(it)
         }) { enterActionMode() })
 
         listSection = ListSection<IBattleConfig>()
@@ -84,99 +84,57 @@ class BattleConfigListFragment : Fragment(R.layout.battle_config_list) {
 
         adapter.addSection(listSection)
 
-        battle_config_list_view.adapter = adapter
-        battle_config_list_view.layoutManager = LinearLayoutManager(requireContext())
-        battle_config_list_view.addItemDecoration(
-            DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL)
-        )
+        binding.battleConfigListView.let {
+            it.adapter = adapter
+            it.layoutManager = LinearLayoutManager(requireContext())
+            it.addItemDecoration(
+                DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL)
+            )
+        }
     }
 
-    private fun newConfig(): String {
-        val guid = UUID.randomUUID().toString()
+    private fun addOnBtnClick() =
+        editItem(vm.newConfig())
 
-        preferences.addBattleConfig(guid)
-
-        return guid
-    }
-
-    private fun addOnBtnClick() {
-        val id = newConfig()
-
-        editItem(id)
-    }
-
-    private fun editItem(Id: String) {
+    private fun editItem(config: IBattleConfig) {
         val action = BattleConfigListFragmentDirections
-            .actionBattleConfigListFragmentToBattleConfigItemSettingsFragment(Id)
+            .actionBattleConfigListFragmentToBattleConfigItemSettingsFragment(config.id)
 
         nav(action)
     }
 
-    val battleConfigsExportAll = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { dirUri ->
+    private fun exportBattleConfigs(dirUri: Uri?, configs: () -> List<IBattleConfig>) {
         if (dirUri != null) {
-            val gson = Gson()
-            val resolver = requireContext().contentResolver
-            val dir = DocumentFile.fromTreeUri(requireContext(), dirUri)
+            lifecycleScope.launch {
+                val result = vm.exportAsync(dirUri, configs()).await()
 
-            var failed = 0
-
-            vm.battleConfigItems.value?.forEach { battleConfig ->
-                val values = battleConfig.export()
-                val json = gson.toJson(values)
-
-                try {
-                    dir?.createFile("*/*", "${battleConfig.name}.fga")
-                        ?.uri
-                        ?.let { uri ->
-                            resolver.openOutputStream(uri)?.use { outStream ->
-                                outStream.writer().use { it.write(json) }
-                            }
-                        }
-                } catch (e: Exception) {
-                    Timber.error(e) { "Failed to export" }
-                    ++failed
+                if (result.failureCount > 0) {
+                    val msg = getString(R.string.battle_config_list_export_failed, result.failureCount)
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 }
-            }
-
-            if (failed > 0) {
-                val msg = getString(R.string.battle_config_list_export_failed, failed)
-                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
             }
         }
     }
 
+    val battleConfigsExportAll = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { dirUri ->
+        exportBattleConfigs(dirUri) {
+            vm.battleConfigItems.value ?: emptyList()
+        }
+    }
+
+    val battleConfigsExportSelected = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { dirUri ->
+        exportBattleConfigs(dirUri) {
+            listSection.selectedItems ?: emptyList()
+        }
+    }
+
     val battleConfigImport = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        var failed = 0
-
         lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                uris.forEach { uri ->
-                    try {
-                        val json = requireContext().contentResolver.openInputStream(uri)?.use { inStream ->
-                            inStream.use {
-                                it.reader().readText()
-                            }
-                        }
+            val result = vm.importAsync(uris).await()
 
-                        if (json != null) {
-                            val gson = Gson()
-                            val map = gson.fromJson(json, Map::class.java)
-                                .map { (k, v) -> k.toString() to v }
-                                .toMap()
-
-                            val id = newConfig()
-                            preferences.forBattleConfig(id).import(map)
-                        }
-                    } catch (e: Exception) {
-                        ++failed
-                        Timber.error(e) { "Import Failed" }
-                    }
-                }
-            }
-
-            if (failed > 0) {
-                val msg = getString(R.string.battle_config_list_import_failed, failed)
-                Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT)
+            if (result.failureCount > 0) {
+                val msg = getString(R.string.battle_config_list_import_failed, result.failureCount)
+                Toast.makeText(context, msg, Toast.LENGTH_SHORT)
                     .show()
             }
         }
@@ -227,6 +185,10 @@ class BattleConfigListFragment : Fragment(R.layout.battle_config_list) {
                         }
                         .setNegativeButton(android.R.string.cancel, null)
                         .show()
+                    true
+                }
+                R.id.action_battle_config_export_selected -> {
+                    battleConfigsExportSelected.launch(Uri.EMPTY)
                     true
                 }
                 else -> false

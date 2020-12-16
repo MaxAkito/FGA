@@ -1,6 +1,6 @@
 package com.mathewsachin.fategrandautomata.scripts.entrypoints
 
-import com.mathewsachin.fategrandautomata.StorageDirs
+import com.mathewsachin.fategrandautomata.IStorageProvider
 import com.mathewsachin.fategrandautomata.scripts.IFgoAutomataApi
 import com.mathewsachin.fategrandautomata.scripts.ISwipeLocations
 import com.mathewsachin.fategrandautomata.scripts.enums.GameServerEnum
@@ -10,9 +10,6 @@ import com.mathewsachin.fategrandautomata.scripts.models.RefillResource
 import com.mathewsachin.fategrandautomata.scripts.modules.*
 import com.mathewsachin.fategrandautomata.scripts.prefs.IPreferences
 import com.mathewsachin.libautomata.*
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.*
 import javax.inject.Inject
 import kotlin.math.absoluteValue
 import kotlin.time.seconds
@@ -30,7 +27,7 @@ fun IFgoAutomataApi.isInSupport(): Boolean {
 open class AutoBattle @Inject constructor(
     exitManager: ExitManager,
     fgAutomataApi: IFgoAutomataApi,
-    val storageDirs: StorageDirs,
+    val storageProvider: IStorageProvider,
     swipeLocations: ISwipeLocations
 ) : EntryPoint(exitManager), IFgoAutomataApi by fgAutomataApi {
     private val support = Support(fgAutomataApi, swipeLocations)
@@ -238,7 +235,11 @@ open class AutoBattle @Inject constructor(
             screenshotDrops()
         }
 
-        Game.resultNextClick.click(5)
+        // Click location changed on JP
+        Game.resultMatRewardsRegion
+            .find(images.matRewards)
+            ?.Region
+            ?.click(5)
     }
 
     private fun checkCEDrops() {
@@ -284,26 +285,10 @@ open class AutoBattle @Inject constructor(
     }
 
     private fun screenshotDrops() {
-        val dropsFolder = File(
-            storageDirs.storageRoot,
-            "drops"
-        )
-
-        if (!dropsFolder.exists()) {
-            dropsFolder.mkdirs()
-        }
-
-        val sdf = SimpleDateFormat("dd-M-yyyy-hh-mm-ss", Locale.US)
-        val timeString = sdf.format(Date())
+        val drops = mutableListOf<IPattern>()
 
         for (i in 0..1) {
-            val dropFileName = "${timeString}.${i}.png"
-
-            takeColorScreenshot().use {
-                it.save(
-                    File(dropsFolder, dropFileName).absolutePath
-                )
-            }
+            drops.add(takeColorScreenshot())
 
             // check if we need to scroll to see more drops
             if (images.dropScrollbar in Game.resultDropScrollbarRegion) {
@@ -311,6 +296,8 @@ open class AutoBattle @Inject constructor(
                 Location(2306, 1032).click()
             } else break
         }
+
+        storageProvider.dropScreenshot(drops)
     }
 
     private fun isRepeatScreen() =
@@ -323,9 +310,23 @@ open class AutoBattle @Inject constructor(
         // Needed to show we don't need to enter the "StartQuest" function
         isContinuing = true
 
-        // Pressing Continue option after completing a quest, reseting the state as would occur in "Menu" function
+        // Pressing Continue option after completing a quest, resetting the state as would occur in "Menu" function
         battle.resetState()
-        Game.continueClick.click()
+
+        val region = Game.continueRegion.find(images.confirm)?.Region
+            ?: return
+
+        // If Boost items are usable, Continue button shifts to the right
+        val useBoost = if (region.X > 1630) {
+            val boost = BoostItem.of(prefs.boostItemSelectionMode)
+
+            boost is BoostItem.Enabled && boost != BoostItem.Enabled.Skip
+        } else false
+
+        if (useBoost) {
+            Game.continueBoostClick.click()
+            useBoostItem()
+        } else Game.continueClick.click()
 
         showRefillsAndRunsMessage()
 
@@ -519,6 +520,10 @@ open class AutoBattle @Inject constructor(
 
         2.seconds.wait()
 
+        useBoostItem()
+    }
+
+    private fun useBoostItem() {
         val boostItem = BoostItem.of(prefs.boostItemSelectionMode)
         if (boostItem is BoostItem.Enabled) {
             boostItem.clickLocation.click()

@@ -27,11 +27,12 @@ class Game @Inject constructor(val prefs: IPreferences) {
         val scriptRegion = Region(Location(), scriptSize)
 
         val menuScreenRegion = Region(2100, 1200, 1000, 1000)
-        val continueRegion = Region(1400, 1000, 600, 200)
+        val continueRegion = Region(1400, 1000, 800, 200)
         val menuStorySkipRegion = Region(2240, 20, 300, 120)
 
         val menuSelectQuestClick = Location(2290, 440)
         val menuStartQuestClick = Location(2400, 1350)
+        val continueBoostClick = Location(1260, 1120)
         val continueClick = Location(1650, 1120)
         val menuStorySkipClick = Location(2360, 80)
         val menuStorySkipYesClick = Location(1600, 1100)
@@ -93,10 +94,12 @@ class Game @Inject constructor(val prefs: IPreferences) {
         val battleMasterSkillOpenClick = Location(2380, 640)
         val battleOrderChangeOkClick = Location(1280, 1260)
 
+        val battleBack = Location(2400, 1370)
+
         val resultScreenRegion = Region(100, 300, 700, 200)
         val resultBondRegion = Region(2000, 750, 120, 190)
         val resultMasterExpRegion = Region(1280, 350, 400, 110)
-        val resultMatRewardsRegion = Region(2080, 1290, 280, 130)
+        val resultMatRewardsRegion = Region(2080, 1220, 280, 200)
         val resultMasterLvlUpRegion = Region(1990, 160, 250, 270)
 
         val resultCeDropRegion = Region(1860, 0, 240, 100)
@@ -121,6 +124,7 @@ class Game @Inject constructor(val prefs: IPreferences) {
     val battleStageCountRegion
         get() = when (prefs.gameServer) {
             GameServerEnum.Tw -> Region(1710, 25, 55, 60)
+            GameServerEnum.Jp -> Region(1764, 28, 31, 44)
             else -> Region(1722, 25, 46, 53)
         }
 }

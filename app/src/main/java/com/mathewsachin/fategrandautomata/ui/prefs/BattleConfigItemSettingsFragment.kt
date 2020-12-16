@@ -15,12 +15,9 @@ import androidx.navigation.fragment.navArgs
 import androidx.preference.*
 import com.google.gson.Gson
 import com.mathewsachin.fategrandautomata.R
-import com.mathewsachin.fategrandautomata.StorageDirs
+import com.mathewsachin.fategrandautomata.SupportImageKind
 import com.mathewsachin.fategrandautomata.prefs.core.PrefsCore
-import com.mathewsachin.fategrandautomata.scripts.enums.MaterialEnum
-import com.mathewsachin.fategrandautomata.scripts.enums.SpamEnum
-import com.mathewsachin.fategrandautomata.scripts.enums.SupportClass
-import com.mathewsachin.fategrandautomata.scripts.enums.SupportSelectionModeEnum
+import com.mathewsachin.fategrandautomata.scripts.enums.*
 import com.mathewsachin.fategrandautomata.scripts.prefs.IBattleConfig
 import com.mathewsachin.fategrandautomata.scripts.prefs.IPreferences
 import com.mathewsachin.fategrandautomata.util.*
@@ -38,7 +35,7 @@ class BattleConfigItemSettingsFragment : PreferenceFragmentCompat() {
     lateinit var preferences: IPreferences
 
     @Inject
-    lateinit var storageDirs: StorageDirs
+    lateinit var storageProvider: StorageProvider
 
     @Inject
     lateinit var prefsCore: PrefsCore
@@ -158,6 +155,9 @@ class BattleConfigItemSettingsFragment : PreferenceFragmentCompat() {
             initWith<MaterialEnum> { it.stringRes }
             summaryProvider = MultiSelectSummaryProvider()
         }
+
+        findPreference<ListPreference>(getString(R.string.pref_shuffle_cards))
+            ?.initWith<ShuffleCardsEnum> { it.stringRes }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -198,32 +198,32 @@ class BattleConfigItemSettingsFragment : PreferenceFragmentCompat() {
     override fun onResume() {
         super.onResume()
 
-        if (storageDirs.shouldExtractSupportImages) {
-            performSupportImageExtraction()
-        } else populateFriendNames()
-    }
-
-    private fun populateFriendNames() {
-        findFriendNamesList()?.apply {
-            populateFriendOrCe(storageDirs.supportFriendFolder)
-        }
-    }
-
-    private fun performSupportImageExtraction() {
         lifecycleScope.launch {
-            val msg = try {
-                SupportImageExtractor(requireContext(), storageDirs).extract()
-                populateFriendNames()
-
-                getString(R.string.support_imgs_extracted)
-            } catch (e: Exception) {
-                getString(R.string.support_imgs_extract_failed).also { msg ->
-                    Timber.error(e) { msg }
-                }
-            }
-
-            Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
+            if (storageProvider.shouldExtractSupportImages) {
+                performSupportImageExtraction()
+            } else populateFriendNames()
         }
+    }
+
+    private suspend fun populateFriendNames() {
+        findFriendNamesList()?.apply {
+            populateFriendOrCe(storageProvider, SupportImageKind.Friend)
+        }
+    }
+
+    private suspend fun performSupportImageExtraction() {
+        val msg = try {
+            SupportImageExtractor(requireContext(), storageProvider).extract()
+            populateFriendNames()
+
+            getString(R.string.support_imgs_extracted)
+        } catch (e: Exception) {
+            getString(R.string.support_imgs_extract_failed).also { msg ->
+                Timber.error(e) { msg }
+            }
+        }
+
+        Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
@@ -235,7 +235,9 @@ class BattleConfigItemSettingsFragment : PreferenceFragmentCompat() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_support_extract_defaults -> {
-                performSupportImageExtraction()
+                lifecycleScope.launch {
+                    performSupportImageExtraction()
+                }
                 true
             }
             R.id.action_battle_config_delete -> {
