@@ -10,6 +10,13 @@
             app:key="@string/pref_skill_conf"
             app:title="@string/p_skill_confirmation" />
 
+        <ListPreference
+            app:defaultValue="@string/pref_game_server_auto_detect"
+            app:icon="@drawable/ic_earth"
+            app:key="@string/pref_game_server"
+            app:title="@string/p_game_server"
+            app:useSimpleSummaryProvider="true" />
+
         <SwitchPreferenceCompat
             app:defaultValue="false"
             app:icon="@drawable/ic_fast_forward"
@@ -56,6 +63,28 @@
             app:title="@string/p_battle_config_cmd_text"
             app:summary="@string/p_battle_config_cmd_text_summary" />
 
+        <PreferenceCategory
+            app:key="wait_ap_regen_category"
+            app:title="@string/p_wait_ap_regen_text">
+            <SwitchPreferenceCompat
+                app:icon="@drawable/ic_time"
+                app:key="@string/pref_wait_ap_regen"
+                app:title="@string/p_wait_ap_regen_text"
+                app:summary="@string/p_wait_ap_regen_text_summary" />
+
+            <SeekBarPreference
+                android:max="60"
+                app:icon="@drawable/ic_counter"
+                app:key="@string/pref_wait_ap_regen_minutes"
+                app:title="@string/p_wait_ap_regen_minutes_text"
+                app:summary="@string/p_wait_ap_regen_minutes_text_summary"
+                app:min="1"
+                app:defaultValue="1"
+                app:seekBarIncrement="1"
+                app:showSeekBarValue="true" />
+        </PreferenceCategory>
+
+
         <!--    <SwitchPreferenceCompat-->
         <!--        app:defaultValue="false"-->
         <!--        app:key="@string/pref_guda_final"-->
@@ -79,7 +108,7 @@
 
     <PreferenceCategory
         app:key="storage_category"
-        app:title="Storage">
+        app:title="@string/p_storage">
         <Preference
             app:key="@string/pref_nav_storage"
             app:title="@string/p_folder"

@@ -17,17 +17,20 @@ class AutoSkill(fgAutomataApi: IFgoAutomataApi) : IFgoAutomataApi by fgAutomataA
         val img = images.battle
 
         // slow devices need this. do not remove.
-        Game.battleScreenRegion.waitVanish(img, 2.seconds)
+        game.battleScreenRegion.waitVanish(img, 2.seconds)
 
-        Game.battleScreenRegion.exists(img, Timeout)
+        game.battleScreenRegion.exists(img, Timeout)
+    }
+
+    private fun confirmSkillUse() {
+        if (prefs.skillConfirmation) {
+            game.battleSkillOkClick.click()
+        }
     }
 
     private fun castSkill(skill: Skill, target: ServantTarget?) {
-        skill.clickLocation.click()
-
-        if (prefs.skillConfirmation) {
-            Game.battleSkillOkClick.click()
-        }
+        game.locate(skill).click()
+        confirmSkillUse()
 
         if (target != null) {
             prefs.skillDelay.wait()
@@ -35,14 +38,14 @@ class AutoSkill(fgAutomataApi: IFgoAutomataApi) : IFgoAutomataApi by fgAutomataA
             selectSkillTarget(target)
         } else {
             // Close the window that opens up if skill is on cool-down
-            Game.battleExtraInfoWindowCloseClick.click()
+            game.battleExtraInfoWindowCloseClick.click()
         }
 
         waitForAnimationToFinish()
     }
 
     private val Skill.imageRegion
-        get() = Region(30, 30, 30, 30) + clickLocation
+        get() = Region(30, 30, 30, 30) + game.locate(this)
 
     val skillSpamDelay = 0.25.seconds
 
@@ -61,16 +64,16 @@ class AutoSkill(fgAutomataApi: IFgoAutomataApi) : IFgoAutomataApi by fgAutomataA
     }
 
     private fun selectSkillTarget(target: ServantTarget) {
-        target.clickLocation.click()
+        game.locate(target).click()
 
         0.5.seconds.wait()
 
         // Exit any extra menu
-        Game.battleExtraInfoWindowCloseClick.click()
+        game.battleExtraInfoWindowCloseClick.click()
     }
 
     private fun openMasterSkillMenu() {
-        Game.battleMasterSkillOpenClick.click()
+        game.battleMasterSkillOpenClick.click()
 
         0.5.seconds.wait()
     }
@@ -85,21 +88,18 @@ class AutoSkill(fgAutomataApi: IFgoAutomataApi) : IFgoAutomataApi by fgAutomataA
         openMasterSkillMenu()
 
         // Click on order change skill
-        Skill.Master.list.last()
-            .clickLocation.click()
+        game.locate(Skill.Master.C).click()
 
-        if (prefs.skillConfirmation) {
-            Game.battleSkillOkClick.click()
-        }
+        confirmSkillUse()
 
         0.3.seconds.wait()
 
-        action.starting.clickLocation.click()
-        action.sub.clickLocation.click()
+        game.locate(action.starting).click()
+        game.locate(action.sub).click()
 
         0.3.seconds.wait()
 
-        Game.battleOrderChangeOkClick.click()
+        game.battleOrderChangeOkClick.click()
 
         // Extra wait to allow order change dialog to close
         1.seconds.wait()
@@ -110,13 +110,13 @@ class AutoSkill(fgAutomataApi: IFgoAutomataApi) : IFgoAutomataApi by fgAutomataA
         1.seconds.wait()
     }
 
-    private fun selectEnemyTarget(enemyTarget: EnemyTarget) {
-        enemyTarget.clickLocation.click()
+    private fun selectEnemyTarget(enemy: EnemyTarget) {
+        game.locate(enemy).click()
 
         0.5.seconds.wait()
 
         // Exit any extra menu
-        Game.battleExtraInfoWindowCloseClick.click()
+        game.battleExtraInfoWindowCloseClick.click()
     }
 
     private fun act(action: AutoSkillAction) = when (action) {
