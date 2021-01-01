@@ -66,30 +66,6 @@ jobs:
           name: mapping
           path: app/build/outputs/mapping/release/mapping.txt
 
-  play_store:
-    needs: build
-    runs-on: macos-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    steps:
-      - name: Download Bundle
-        uses: actions/download-artifact@v1
-        with:
-          name: bundle
-
-      - name: Download mapping file
-        uses: actions/download-artifact@v1
-        with:
-          name: mapping
-
-      - name: Deploy to Play Store
-        uses: r0adkll/upload-google-play@v1
-        with:
-          track: production
-          serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT }}
-          packageName: com.mathewsachin.fategrandautomata
-          releaseFile: ./bundle/app-release.aab
-          mappingFile: ./mapping/mapping.txt
-
   # Release master branch
   canary:
     needs: build
@@ -110,7 +86,7 @@ jobs:
         with:
           tag_name: canary
           release_name: 'FGA canary-${{ github.run_number }}'
-          prerelease: true
+          prerelease: false
 
       - uses: actions/download-artifact@v1
         with:
@@ -123,6 +99,6 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./apk/app-ci.apk
-          asset_name: com.mathewsachin.fategrandautomata.apk
+          asset_name: com.maxakito.fga.apk
           asset_content_type: application/vnd.android.package-archive
       
