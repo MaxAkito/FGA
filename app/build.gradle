@@ -26,7 +26,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.mathewsachin.fategrandautomata"
+        applicationId "com.maxakito.fga"
         minSdkVersion 24
         targetSdkVersion 29
         versionCode Integer.valueOf(System.env.FGA_VERSION_CODE ?: 1)
