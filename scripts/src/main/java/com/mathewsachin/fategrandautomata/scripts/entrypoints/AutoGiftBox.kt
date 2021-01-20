@@ -25,7 +25,7 @@ class AutoGiftBox @Inject constructor(
 
         val xpOffsetX = (game.scriptArea.find(images.goldXP) ?: game.scriptArea.find(images.silverXP))
             ?.Region?.center?.X
-            ?: throw Exception(messages.cannotDetectScriptType)
+            ?: throw Exception("Couldn't find Embers on screen. This shouldn't happen.")
 
         val checkRegion = Region(xpOffsetX + 1320, 350, 140, 1500)
         val scrollEndRegion = Region(100 + checkRegion.X, 1421, 320, 19)
@@ -76,11 +76,9 @@ class AutoGiftBox @Inject constructor(
 
         for (gift in checkRegion.findAll(images.giftBoxCheck).sorted()) {
             val countRegion = when (prefs.gameServer) {
-                GameServerEnum.Jp -> -970
+                GameServerEnum.Jp, GameServerEnum.Tw, GameServerEnum.Cn -> -940
                 GameServerEnum.En -> -830
                 GameServerEnum.Kr -> -960
-                GameServerEnum.Tw -> -930
-                else -> throw ScriptExitException("Not supported on this server yet")
             }.let { x -> Region(x, -120, 300, 100) } + gift.Region.location
 
             val iconRegion = Region(-1480, -116, 300, 240) + gift.Region.location

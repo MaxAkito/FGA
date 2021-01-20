@@ -21,6 +21,15 @@ fun IFgoAutomataApi.isInSupport(): Boolean {
     return game.supportScreenRegion.exists(images.supportScreen, Similarity = 0.85)
 }
 
+fun IFgoAutomataApi.stopIfInventoryFull() {
+    // Inventory full. Stop script. We only have images for JP and NA
+    if (prefs.gameServer in listOf(GameServerEnum.En, GameServerEnum.Jp)) {
+        if (images.inventoryFull in game.inventoryFullRegion) {
+            throw ScriptExitException(messages.inventoryFull)
+        }
+    }
+}
+
 /**
  * Script for starting quests, selecting the support and doing battles.
  */
@@ -39,6 +48,7 @@ open class AutoBattle @Inject constructor(
     private var isContinuing = false
     private var partySelected = false
     private var matsGot = mutableMapOf<MaterialEnum, Int>()
+    private var ceDropCount = 0
 
     override fun script(): Nothing {
         init()
@@ -58,8 +68,33 @@ open class AutoBattle @Inject constructor(
         } catch (e: Exception) {
             throw Exception(makeExitMessage("${messages.unexpectedError}: ${e.message}"), e)
         } finally {
-            if (prefs.refill.autoDecrement) {
-                prefs.refill.repetitions -= stonesUsed
+            val refill = prefs.refill
+
+            // Auto-decrement apples
+            if (refill.autoDecrement) {
+                refill.repetitions -= stonesUsed
+            }
+
+            // Auto-decrement runs
+            if (refill.shouldLimitRuns && refill.autoDecrementRuns) {
+                refill.limitRuns -= battle.state.runs
+
+                // Turn off run limit when done
+                if (refill.limitRuns <= 0) {
+                    refill.limitRuns = 1
+                    refill.shouldLimitRuns = false
+                }
+            }
+
+            // Auto-decrement materials
+            if (refill.shouldLimitMats && refill.autoDecrementMats) {
+                refill.limitMats -= matsGot.values.sum()
+
+                // Turn off limit by materials when done
+                if (refill.limitMats <= 0) {
+                    refill.limitMats = 1
+                    refill.shouldLimitMats = false
+                }
             }
         }
     }
@@ -72,6 +107,11 @@ open class AutoBattle @Inject constructor(
             if (msg.isNotBlank()) {
                 appendLine(msg)
             }
+        }
+
+        if (!prefs.stopOnCEDrop && ceDropCount > 0) {
+            appendLine("$ceDropCount ${messages.ceDropped}")
+            appendLine()
         }
 
         if (prefs.selectedBattleConfig.materials.isNotEmpty()) {
@@ -248,9 +288,11 @@ open class AutoBattle @Inject constructor(
             .map { (region, _) ->
                 starsRegion + region.location
             }
-            .any { images.dropCEStars in it }
+            .count { images.dropCEStars in it }
 
-        if (ceDropped) {
+        if (ceDropped > 0) {
+            ceDropCount += ceDropped
+
             val msg = messages.ceDropped
             if (prefs.stopOnCEDrop) {
                 throw ScriptExitException(msg)
@@ -442,14 +484,11 @@ open class AutoBattle @Inject constructor(
      */
     private fun refillStamina() {
         val refillPrefs = prefs.refill
-        val waitAPRegenPrefs = prefs.waitAPRegen
-        val waitAPRegenMinutePrefs = prefs.waitAPRegenMinutes
 
         if (refillPrefs.enabled
             && stonesUsed < refillPrefs.repetitions
             && refillPrefs.resources.isNotEmpty()
         ) {
-
             refillPrefs.resources
                 .map { game.locate(it) }
                 .forEach { it.click() }
@@ -459,9 +498,9 @@ open class AutoBattle @Inject constructor(
             ++stonesUsed
 
             3.seconds.wait()
-        } else if (waitAPRegenPrefs) {
-            Location(1300, 1240).click()
-            for (i in waitAPRegenMinutePrefs downTo 1) {
+        } else if (prefs.waitAPRegen) {
+            game.staminaCloseClick.click()
+            for (i in prefs.waitAPRegenMinutes downTo 1) {
                 toast(messages.waitAPToast(i))
                 60.seconds.wait()
             }
@@ -576,13 +615,7 @@ open class AutoBattle @Inject constructor(
 
     private fun afterSelectingQuest() {
         1.5.seconds.wait()
-
-        // Inventory full. Stop script. We only have images for JP and NA
-        if (prefs.gameServer in listOf(GameServerEnum.En, GameServerEnum.Jp)) {
-            if (images.inventoryFull in game.inventoryFullRegion) {
-                throw ScriptExitException(messages.inventoryFull)
-            }
-        }
+        stopIfInventoryFull()
 
         // Auto refill
         while (images.stamina in game.staminaScreenRegion) {

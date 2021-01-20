@@ -73,7 +73,6 @@
     <string name="card_priority_low">LOW</string>
     <string name="card_priority_add_wave">Add Wave</string>
     <string name="card_priority_remove_last_wave">Remove Last Wave</string>
-    <string name="card_priority_experimental">Enable experimental features</string>
 
     <string name="start_service">Start Service</string>
     <string name="stop_service">Stop Service</string>
@@ -125,6 +124,7 @@
     <string name="p_battle_config_support_mlb">Max-limit broken</string>
     <string name="p_battle_config_support_friend_names">Friend names</string>
     <string name="p_battle_config_support_friends_only">Friends Only</string>
+    <string name="p_battle_config_support_friend_name_hint">Friend name images can be added using \'Support Image Maker\' script</string>
 
     <string name="p_max_skill_1">Max Skill 1</string>
     <string name="p_max_skill_2">Max Skill 2</string>
@@ -231,6 +231,9 @@
     <string name="p_support_mode_friend">Friend</string>
 
     <string name="p_script_mode_battle">Battle</string>
+    <string name="p_script_mode_lottery">Lottery</string>
+    <string name="p_script_mode_fp">Friend Gacha</string>
+    <string name="p_script_mode_support_image_maker">Support Image Maker</string>
     <string name="p_script_mode_gift_box">Gift Box</string>
 
     <string name="p_max_gold_ember_set_size">Max Gold ember set size</string>
@@ -262,8 +265,6 @@
     <string name="draw_overlay_disabled_go_to_settings">Go To Settings</string>
     <string name="cannot_start_recording">Couldn\'t start recording</string>
     <string name="select_script">Select Script</string>
-    <string name="other_scripts">Lottery/FP/GiftBox/\nSupport Image Maker</string>
-    <string name="cannot_detect_script_type">Couldn\'t detect Script type</string>
 
     <string name="script_msg_ap_ran_out">AP ran out!</string>
     <string name="stopped_by_user">Script stopped by user</string>

@@ -85,7 +85,7 @@ class Game @Inject constructor(
     val continueBoostClick = Location(-20, 1120).xFromCenter()
     val continueClick = Location(370, 1120).xFromCenter()
 
-    val inventoryFullRegion = Region(-230, 900, 458, 90).xFromCenter()
+    val inventoryFullRegion = Region(-280, 860, 560, 190).xFromCenter()
 
     val menuScreenRegion =
         (if (isWide)
@@ -112,6 +112,7 @@ class Game @Inject constructor(
 
     val staminaScreenRegion = Region(-680, 200, 300, 300).xFromCenter()
     val staminaOkClick = Location(370, 1120).xFromCenter()
+    val staminaCloseClick = Location(0, 1240).xFromCenter()
 
     val withdrawRegion = Region(-880, 540, 1800, 190).xFromCenter()
     val withdrawAcceptClick = Location(485, 720).xFromCenter()

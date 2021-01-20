@@ -73,7 +73,6 @@
     <string name="card_priority_low">낮음</string>
     <string name="card_priority_add_wave">웨이브 추가</string>
     <string name="card_priority_remove_last_wave">마지막 웨이브 제거</string>
-    <string name="card_priority_experimental">실험적 기능 활성화</string>
 
     <string name="start_service">서비스 시작</string>
     <string name="stop_service">서비스 중지</string>
@@ -152,7 +151,10 @@
     <string name="p_battle_config_cmd_text_summary">오트 스킬 커맨드를 수정하기 위해 텍스트 박스 보이기</string>
 
     <string name="p_wait_ap_regen_text">AP 회복 대기</string>
-    <string name="p_wait_ap_regen_text_summary">AP가 다 소모되어도 FGA앱을 실행시키며, AP가 충분히 회복되면 스크립트를 자동으로 재실행합니다.</string>
+    <string name="p_wait_ap_regen_text_summary">AP가 소모된 후에도 페그오를 켜주세요. AP가 자연적으로 회복되면 현재 스크립트를 반복합니다.</string>
+    <string name="p_wait_ap_regen_minutes_text">재확인 시간 (분)</string>
+    <string name="p_wait_ap_regen_minutes_text_summary">화면 꺼짐 시간을 재확인 시간보다 길게 설정해주세요.</string>
+    <string name="wait_ap_regen_toast_message">AP회복 확인중.  %d분 후 재확인.</string>
 
     <string name="p_storage">저장소</string>
     <string name="p_folder">서포트 이미지, 드롭 이미지 등의 폴더를 변경합니다.</string>
@@ -228,6 +230,9 @@
     <string name="p_support_mode_friend">친구</string>
 
     <string name="p_script_mode_battle">배틀</string>
+    <string name="p_script_mode_lottery">룰렛</string>
+    <string name="p_script_mode_fp">친구 포인트 가챠</string>
+    <string name="p_script_mode_support_image_maker">서포트 이미지 메이커</string>
     <string name="p_script_mode_gift_box">선물함</string>
 
     <string name="p_max_gold_ember_set_size">4성 경험치 카드 개수</string>
@@ -260,8 +265,6 @@
     <string name="draw_overlay_disabled_go_to_settings">설정으로 가기</string>
     <string name="cannot_start_recording">화면 녹화를 시작할 수 없음</string>
     <string name="select_script">스크립트 선택</string>
-    <string name="other_scripts">룰렛/프포/선물함/\n서포트 이미지 메이커</string>
-    <string name="cannot_detect_script_type">스크립트 유형을 감지할 수 없습니다</string>
 
     <string name="script_msg_ap_ran_out">AP를 모두 소비하였습니다!</string>
     <string name="stopped_by_user">사용자에 의해 스크립트 중지됨</string>
